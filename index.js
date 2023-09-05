@@ -1,10 +1,6 @@
-//import { fs } from 'node:fs';
-//import url from 'node:url';
-//import chalk from "chalk";
-const fs = require('node:fs');
-const url = require('node:url');
-//const chalk = require('chalk')
-const http = require('node:http');
+const fs = require('fs');
+const url = require('url');
+const http = require('http');
 const { Readable } = require('stream');
 
 const root = process.env.ROOT_DIR || './frames';
@@ -14,16 +10,6 @@ const appHost = process.env.APP_HOST || 'localhost';
 const chalk = {
     red(text) {
         return text;
-    }
-}
-
-class FramesLoaderOptions {
-    framesDir;
-    reverse = false;
-    start = 0;
-
-    constructor(framesDir) {
-        this.framesDir = framesDir;
     }
 }
 
@@ -45,7 +31,11 @@ const getFramesOptions = (url) => {
         throw new Error(`Unknown animation ${dir}!`);
     }
 
-    const framesOptions = new FramesLoaderOptions(dir);
+    const framesOptions = {
+        framesDir: dir,
+        reverse: false,
+        start: 0
+    }
 
     if (!url.searchParams) {
         return framesOptions;
@@ -71,7 +61,28 @@ const loadFrames = (framesOptions) => {
     const frames = [];
     const dir = `${root}/${framesOptions.framesDir}/`;
 
-    for (const file of fs.readdirSync(dir)) {
+    const files = fs.readdirSync(dir).sort((current, next) => {
+        const currentName = fileNameToInt(current);
+        const nextName = fileNameToInt(next);
+
+        if (currentName === nextName) {
+            return 0;
+        }
+
+        if (currentName > nextName) {
+            return 1;
+        }
+
+        return -1;
+
+        function fileNameToInt(name) {
+            name = name.split('.')[0];
+
+            return parseInt(name);
+        }
+    })
+
+    for (const file of files) {
         if (['.', '..'].includes(file)) {
             continue;
         }
@@ -100,25 +111,22 @@ const streamer = (stream, frames, isDesktop) => {
         }
 
         stream.push(currentFrame);
-        //const newColor = lastColor = selectColor(lastColor);
-
-        //stream.push(colors[colorsOptions[newColor]](frames[index]));
 
         index = (index + 1) % frames.length;
     }, 70);
 }
 
 const server = http.createServer((req, res) => {
-/*    if (
+    if (
         req.headers &&
         req.headers['user-agent'] &&
         !req.headers['user-agent'].includes('curl')
     ) {
-        return res.end();
-    }*/
+        return res.end('This is a curl only app!');
+    }
+
     const isDesktop = req.headers &&
         req.headers['user-agent'] &&
-        typeof req.headers['user-agent'] === 'string' &&
         !req.headers['user-agent'].includes('curl')
     ;
 
@@ -144,7 +152,7 @@ const server = http.createServer((req, res) => {
             clearInterval(interval);
         });
     } catch (e) {
-        return res.end(chalk.red(e.message + '  ' + e.stack ?? ''))
+        return res.end(chalk.red(e.message + '  '))
     }
 })
 
