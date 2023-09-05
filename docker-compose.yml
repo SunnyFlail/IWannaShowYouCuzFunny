@@ -1,0 +1,11 @@
+version: "3.20"
+services:
+  js:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    volumes:
+      - .:/var/www/html
+    entrypoint: 'docker/entrypoint.sh'
+    ports:
+      - 3000:3000
